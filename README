@@ -1,0 +1,82 @@
+Canvas filters
+--------------
+
+This library implements a few image processing filters using the canvas element.
+
+The filters operate on ImageData objects. The filters do not modify the source ImageData.
+
+
+API Documentation
+-----------------
+
+Filters : {
+	//
+	// Convenience functions
+	//
+	
+	// filterImage applies a filter function to an image or canvas element.
+	// Arguments from the third onwards are passed as extra arguments to the filter function.
+	ImageData filterImage(Function filter, Image_or_Canvas image, Filter_arguments var_args, ...)
+
+	// getPixels returns the ImageData object for an image or a canvas element.
+	ImageData getPixels(Image_or_Canvas img)
+	
+	// getCanvas creates a canvas of the wanted dimensions
+	Canvas getCanvas(int width, int height)
+	
+	// createImageData creates an ImageData object of the wanted dimensions
+	ImageData createImageData(int width, int height)
+	
+	//
+	// Filters
+	// 
+	
+	// identity returns a copy of the ImageData
+	ImageData identity(ImageData pixels)
+	
+	// grayscale converts the image to grayscale using the CIE luminance 
+	// (0.2126*r + 0.7152*g + 0.0722*b)
+	ImageData grayscale(ImageData pixels)
+
+	// threshold converts the image to a two-color image with
+	// pixels brighter than or equal to the threshold value rendered white and 
+	// pixels darker than the threshold rendered black
+	// The filter uses CIE luminance to compute the value of a pixel.
+	// (0.2126*r + 0.7152*g + 0.0722*b)
+	ImageData threshold(ImageData pixels, int threshold)
+	
+	// invert inverts the RGB channels of the image.
+	// The inverted version of a pixel is [255-r, 255-g, 255-b, a]
+	ImageData invert(ImageData pixels)
+
+	// convolve convolves the image using the weights array as a square
+	// row-major convolution matrix. If the opaque argument is set to true
+	// the result image will have an opaque alpha channel.
+	ImageData convolve(ImageData pixels, Array weights, bool opaque)
+
+	// convolveFloat32 is a version of convolve that operates on ImageData-like
+	// objects with a Float32Array storing the pixels
+	// {width:int, height:int, data:Float32Array}. 
+	// Useful when you need a high value range or negative values in pixels.  
+	Float32ImageData convolveFloat32(ImageData pixels, Array weights, bool opaque)
+
+	// gaussian5 applies a 5x5 gaussian blur kernel on the image.
+	ImageData gaussian5(ImageData pixels)
+	
+	// gaussian3 applies a 3x3 gaussian blur kernel on the image.
+	ImageData gaussian3(ImageData pixels)
+	
+	// laplace applies a Laplace edge detection kernel on the image.
+	ImageData laplace(ImageData pixels)
+	
+	// sobel applies a Sobel filter on the image.
+	// This filter is purely for looks, the red channel encodes absolute vertical gradient
+	// and the green channel absolute horizontal gradient.
+	ImageData sobel(ImageData pixels)
+	
+	// darkenBlend blends b on top of a, replacing a with b whenever b is darker.
+	// The filter operates on a per-channel basis, the result pixels
+	// are computed as [min(a.r, b.r), min(a.g, b.g), min(a.b, b.b), a.a].
+	ImageData darkenBlend(ImageData a, ImageData b)
+	
+}
