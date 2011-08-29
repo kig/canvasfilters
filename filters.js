@@ -361,7 +361,3 @@ Filters.lightenBlend = function(a, b) {
   }
   return output;
 };
-
-Filters.rgbToHsl = function(pixels) {
-};
-
