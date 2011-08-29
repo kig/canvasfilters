@@ -21,6 +21,9 @@ Filters : {
 	// getPixels returns the ImageData object for an image or a canvas element.
 	ImageData getPixels(Image_or_Canvas img)
 	
+	// toCanvas returns a new canvas filled with the given ImageData object.
+	Canvas toCanvas(ImageData pixels)
+	
 	// getCanvas creates a canvas of the wanted dimensions
 	Canvas getCanvas(int width, int height)
 	
@@ -34,15 +37,27 @@ Filters : {
 	// identity returns a copy of the ImageData
 	ImageData identity(ImageData pixels)
 	
-	// grayscale converts the image to grayscale using the CIE luminance 
+	// luminance converts the image to grayscale using the CIE luminance 
 	// (0.2126*r + 0.7152*g + 0.0722*b)
+	ImageData luminance(ImageData pixels)
+
+	// grayscale converts the image to grayscale using  
+	// (0.3*r + 0.59*g + 0.11*b)
 	ImageData grayscale(ImageData pixels)
 
+	// grayscaleAvg converts the image to grayscale using  
+	// (r+g+b) / 3
+	ImageData grayscaleAvg(ImageData pixels)
+
+	// desaturate desaturates image by the given factor.
+	// It uses the grayscale factors for the grayscale value.
+	ImageData desaturate(ImageData pixels, float factor)
+	
 	// threshold converts the image to a two-color image with
 	// pixels brighter than or equal to the threshold value rendered white and 
 	// pixels darker than the threshold rendered black
-	// The filter uses CIE luminance to compute the value of a pixel.
-	// (0.2126*r + 0.7152*g + 0.0722*b)
+	// The filter uses grayscale to compute the value of a pixel.
+	// (0.3*r + 0.59*g + 0.11*b)
 	ImageData threshold(ImageData pixels, int threshold)
 	
 	// invert inverts the RGB channels of the image.
@@ -73,10 +88,25 @@ Filters : {
 	// This filter is purely for looks, the red channel encodes absolute vertical gradient
 	// and the green channel absolute horizontal gradient.
 	ImageData sobel(ImageData pixels)
+
+	// sobelVectors computes the signed horizontal and vertical gradients of the image
+	// and returns the array of resulting 2-vectors, packed tightly into a Float32Array
+	Float32Vec2ImageData sobelVectors(ImageData pixels)
+	
+	// sobelVerticalGradient computes the signed vertical gradient of the image
+	Float32ImageData sobelVerticalGradient(ImageData pixels)
+	
+	// sobelHorizontalGradient computes the signed horizontal gradient of the image
+	Float32ImageData sobelHorizontalGradient(ImageData pixels)
 	
 	// darkenBlend blends b on top of a, replacing a with b whenever b is darker.
 	// The filter operates on a per-channel basis, the result pixels
 	// are computed as [min(a.r, b.r), min(a.g, b.g), min(a.b, b.b), a.a].
 	ImageData darkenBlend(ImageData a, ImageData b)
+	
+	// lightenBlend blends b on top of a, replacing a with b whenever b is lighter.
+	// The filter operates on a per-channel basis, the result pixels
+	// are computed as [max(a.r, b.r), max(a.g, b.g), max(a.b, b.b), a.a].
+	ImageData lightenBlend(ImageData a, ImageData b)
 	
 }

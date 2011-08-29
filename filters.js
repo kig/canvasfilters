@@ -13,6 +13,13 @@ Filters.getPixels = function(img) {
   return ctx.getImageData(0,0,c.width,c.height);
 };
 
+Filters.tmpCanvas = document.createElement('canvas');
+Filters.tmpCtx = Filters.tmpCanvas.getContext('2d');
+
+Filters.createImageData = function(w,h) {
+  return this.tmpCtx.createImageData(w,h);
+};
+
 Filters.getCanvas = function(w,h) {
   var c = document.createElement('canvas');
   c.width = w;
@@ -28,6 +35,12 @@ Filters.filterImage = function(filter, image, var_args) {
   return filter.apply(null, args);
 };
 
+Filters.toCanvas = function(pixels) {
+  var canvas = this.getCanvas(pixels.width, pixels.height);
+  canvas.getContext('2d').putImageData(pixels, 0, 0);
+  return canvas;
+};
+
 Filters.identity = function(pixels, args) {
   var output = Filters.createImageData(pixels.width, pixels.height);
   var dst = output.data;
@@ -38,7 +51,7 @@ Filters.identity = function(pixels, args) {
   return output;
 };
 
-Filters.grayscale = function(pixels, args) {
+Filters.luminance = function(pixels, args) {
   var output = Filters.createImageData(pixels.width, pixels.height);
   var dst = output.data;
   var d = pixels.data;
@@ -54,6 +67,54 @@ Filters.grayscale = function(pixels, args) {
   return output;
 };
 
+Filters.grayscale = function(pixels, args) {
+  var output = Filters.createImageData(pixels.width, pixels.height);
+  var dst = output.data;
+  var d = pixels.data;
+  for (var i=0; i<d.length; i+=4) {
+    var r = d[i];
+    var g = d[i+1];
+    var b = d[i+2];
+    var v = 0.3*r + 0.59*g + 0.11*b;
+    dst[i] = dst[i+1] = dst[i+2] = v;
+    dst[i+3] = d[i+3];
+  }
+  return output;
+};
+
+Filters.grayscaleAvg = function(pixels, args) {
+  var output = Filters.createImageData(pixels.width, pixels.height);
+  var dst = output.data;
+  var d = pixels.data;
+  for (var i=0; i<d.length; i+=4) {
+    var r = d[i];
+    var g = d[i+1];
+    var b = d[i+2];
+    var v = (r+g+b) / 3;
+    dst[i] = dst[i+1] = dst[i+2] = v;
+    dst[i+3] = d[i+3];
+  }
+  return output;
+};
+
+Filters.desaturate = function(pixels, factor) {
+  var output = Filters.createImageData(pixels.width, pixels.height);
+  var dst = output.data;
+  var d = pixels.data;
+  var f1 = 1-factor;
+  for (var i=0; i<d.length; i+=4) {
+    var r = d[i];
+    var g = d[i+1];
+    var b = d[i+2];
+    var v = 0.3*r + 0.59*g + 0.11*b;
+    dst[i] = f1*dst[i] + f*v; 
+    dst[i+1] = f1*dst[i+1] + f*v;
+    dst[i+2] = f1*dst[i+2] + f*v;
+    dst[i+3] = d[i+3];
+  }
+  return output;
+};
+
 Filters.threshold = function(pixels, threshold) {
   var output = Filters.createImageData(pixels.width, pixels.height);
   var d = pixels.data;
@@ -62,7 +123,7 @@ Filters.threshold = function(pixels, threshold) {
     var r = d[i];
     var g = d[i+1];
     var b = d[i+2];
-    var v = (0.2126*r + 0.7152*g + 0.0722*b >= threshold) ? 255 : 0;
+    var v = (0.3*r + 0.59*g + 0.11*b >= threshold) ? 255 : 0;
     dst[i] = dst[i+1] = dst[i+2] = v;
     dst[i+3] = d[i+3];
   }
@@ -80,13 +141,6 @@ Filters.invert = function(pixels) {
     dst[i+3] = d[i+3];
   }
   return output;
-};
-
-Filters.tmpCanvas = document.createElement('canvas');
-Filters.tmpCtx = Filters.tmpCanvas.getContext('2d');
-
-Filters.createImageData = function(w,h) {
-  return this.tmpCtx.createImageData(w,h);
 };
 
 Filters.convolve = function(pixels, weights, opaque) {
@@ -232,18 +286,41 @@ Filters.laplace = function(pixels) {
   ], true);
 };
 
-Filters.sobel = function(px) {
-  px = Filters.grayscale(px);
-  var vertical = Filters.convolveFloat32(
+Filters.sobelVerticalGradient = function(px) {
+  return this.convolveFloat32(
     px,
     [-1,-2,-1,
       0, 0, 0,
       1, 2, 1]);
-  var horizontal = Filters.convolveFloat32(
+};
+
+Filters.sobelHorizontalGradient = function(px) {
+  return this.convolveFloat32(
     px,
     [-1,0,1,
      -2,0,2,
      -1,0,1]);
+};
+
+Filters.sobelVectors = function(px) {
+  var vertical = this.sobelVerticalGradient(px);
+  var horizontal = this.sobelHorizontalGradient(px);
+  var id = {width: vertical.width, height: vertical.height, 
+            data: new Float32Array(vertical.width*vertical.height*8)};
+  var vd = vertical.data;
+  var hd = horizontal.data;
+  var idd = id.data;
+  for (var i=0,j=0; i<idd.length; i+=2,j++) {
+    idd[i] = hd[j];
+    idd[i+1] = vd[j];
+  }
+  return id;
+};
+
+Filters.sobel = function(px) {
+  px = Filters.grayscale(px);
+  var vertical = Filters.sobelVerticalGradient(px);
+  var horizontal = Filters.sobelHorizontalGradient(px);
   var id = Filters.createImageData(vertical.width, vertical.height);
   for (var i=0; i<id.data.length; i+=4) {
     var v = Math.abs(vertical.data[i]);
@@ -257,16 +334,34 @@ Filters.sobel = function(px) {
 };
 
 
-Filters.darkenBlend = function(pixels, pixels2) {
-  var output = Filters.createImageData(pixels.width, pixels.height);
-  var d = pixels.data;
-  var b = pixels2.data;
+Filters.darkenBlend = function(below, above) {
+  var output = Filters.createImageData(below.width, below.height);
+  var a = below.data;
+  var b = above.data;
   var dst = output.data;
-  for (var i=0; i<d.length; i+=4) {
-    dst[i] = Math.min(d[i],b[i]);
-    dst[i+1] = Math.min(d[i+1],b[i+1]);
-    dst[i+2] = Math.min(d[i+2],b[i+2]);
-    dst[i+3] = d[i+3];
+  for (var i=0; i<a.length; i+=4) {
+    dst[i] = Math.min(a[i],b[i]);
+    dst[i+1] = Math.min(a[i+1],b[i+1]);
+    dst[i+2] = Math.min(a[i+2],b[i+2]);
+    dst[i+3] = a[i+3];
   }
   return output;
 };
+
+Filters.lightenBlend = function(a, b) {
+  var output = Filters.createImageData(below.width, below.height);
+  var a = below.data;
+  var b = above.data;
+  var dst = output.data;
+  for (var i=0; i<a.length; i+=4) {
+    dst[i] = Math.max(a[i],b[i]);
+    dst[i+1] = Math.max(a[i+1],b[i+1]);
+    dst[i+2] = Math.max(a[i+2],b[i+2]);
+    dst[i+3] = a[i+3];
+  }
+  return output;
+};
+
+Filters.rgbToHsl = function(pixels) {
+};
+
