@@ -1,0 +1,37 @@
+<html>
+	<head>
+		<script src="filters.js"></script>
+	</head>
+	<body>
+		<script>
+			var testing = document.createElement('h2');
+			testing.innerHTML = 'testing';
+			document.body.appendChild(testing);
+			var a = Filters.getCanvas(200,200);
+			var b = Filters.createImageData(200,200);
+			var c = Filters.filterImage(Filters.grayscale, a);
+			Filters.toCanvas(c);
+			Filters.identity(c);
+			Filters.luminance(c);
+			Filters.grayscaleAvg(c);
+			Filters.desaturate(c, 0.4);
+			Filters.threshold(c, 128);
+			Filters.invert(c);
+			Filters.gaussian3(c);
+			Filters.gaussian5(c);
+			Filters.sobel(c);
+			Filters.sobelVectors(c);
+			Filters.laplace(c);
+			Filters.darkenBlend(c,b);
+			Filters.lightenBlend(c,b);
+			Filters.multiplyBlend(c,b);
+			Filters.screenBlend(c,b);
+			Filters.addBlend(c,b);
+			Filters.subBlend(c,b);
+			Filters.differenceBlend(c,b);
+			var ok = document.createElement('h2');
+			ok.innerHTML = 'ok';
+			document.body.appendChild(ok);
+		</script>
+	</body>
+</html>

@@ -107,9 +107,9 @@ Filters.desaturate = function(pixels, factor) {
     var g = d[i+1];
     var b = d[i+2];
     var v = 0.3*r + 0.59*g + 0.11*b;
-    dst[i] = f1*dst[i] + f*v; 
-    dst[i+1] = f1*dst[i+1] + f*v;
-    dst[i+2] = f1*dst[i+2] + f*v;
+    dst[i] = f1*dst[i] + factor*v; 
+    dst[i+1] = f1*dst[i+1] + factor*v;
+    dst[i+2] = f1*dst[i+2] + factor*v;
     dst[i+3] = d[i+3];
   }
   return output;
