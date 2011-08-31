@@ -343,12 +343,12 @@ Filters.darkenBlend = function(below, above) {
     dst[i] = Math.min(a[i],b[i]);
     dst[i+1] = Math.min(a[i+1],b[i+1]);
     dst[i+2] = Math.min(a[i+2],b[i+2]);
-    dst[i+3] = a[i+3];
+    dst[i+3] = a[i+3]+((255-a[i+3])*b[i+3])/255;
   }
   return output;
 };
 
-Filters.lightenBlend = function(a, b) {
+Filters.lightenBlend = function(below, above) {
   var output = Filters.createImageData(below.width, below.height);
   var a = below.data;
   var b = above.data;
@@ -357,7 +357,77 @@ Filters.lightenBlend = function(a, b) {
     dst[i] = Math.max(a[i],b[i]);
     dst[i+1] = Math.max(a[i+1],b[i+1]);
     dst[i+2] = Math.max(a[i+2],b[i+2]);
-    dst[i+3] = a[i+3];
+    dst[i+3] = a[i+3]+((255-a[i+3])*b[i+3])/255;
+  }
+  return output;
+};
+
+Filters.multiplyBlend = function(below, above) {
+  var output = Filters.createImageData(below.width, below.height);
+  var a = below.data;
+  var b = above.data;
+  var dst = output.data;
+  for (var i=0; i<a.length; i+=4) {
+    dst[i] = (a[i]*b[i])/255;
+    dst[i+1] = (a[i+1]*b[i+1])/255;
+    dst[i+2] = (a[i+2]*b[i+2])/255;
+    dst[i+3] = a[i+3]+((255-a[i+3])*b[i+3])/255;
+  }
+  return output;
+};
+
+Filters.screenBlend = function(below, above) {
+  var output = Filters.createImageData(below.width, below.height);
+  var a = below.data;
+  var b = above.data;
+  var dst = output.data;
+  for (var i=0; i<a.length; i+=4) {
+    dst[i] = 255 - (((255 - b[i])*(255 - a[i]))/255);
+    dst[i+1] = 255 - (((255 - b[i+1])*(255 - a[i+1]))/255);
+    dst[i+2] = 255 - (((255 - b[i+2])*(255 - a[i+2]))/255);
+    dst[i+3] = a[i+3]+((255-a[i+3])*b[i+3])/255;
+  }
+  return output;
+};
+
+Filters.addBlend = function(below, above) {
+  var output = Filters.createImageData(below.width, below.height);
+  var a = below.data;
+  var b = above.data;
+  var dst = output.data;
+  for (var i=0; i<a.length; i+=4) {
+    dst[i] = (a[i]+b[i]);
+    dst[i+1] = (a[i+1]+b[i+1]);
+    dst[i+2] = (a[i+2]+b[i+2]);
+    dst[i+3] = a[i+3]+((255-a[i+3])*b[i+3])/255;
+  }
+  return output;
+};
+
+Filters.subBlend = function(below, above) {
+  var output = Filters.createImageData(below.width, below.height);
+  var a = below.data;
+  var b = above.data;
+  var dst = output.data;
+  for (var i=0; i<a.length; i+=4) {
+    dst[i] = (a[i]+b[i]-255);
+    dst[i+1] = (a[i+1]+b[i+1]-255);
+    dst[i+2] = (a[i+2]+b[i+2]-255);
+    dst[i+3] = a[i+3]+((255-a[i+3])*b[i+3])/255;
+  }
+  return output;
+};
+
+Filters.differenceBlend = function(below, above) {
+  var output = Filters.createImageData(below.width, below.height);
+  var a = below.data;
+  var b = above.data;
+  var dst = output.data;
+  for (var i=0; i<a.length; i+=4) {
+    dst[i] = Math.abs(a[i]-b[i]);
+    dst[i+1] = Math.abs(a[i+1]-b[i+1]);
+    dst[i+2] = Math.abs(a[i+2]-b[i+2]);
+    dst[i+3] = a[i+3]+((255-a[i+3])*b[i+3])/255;
   }
   return output;
 };
