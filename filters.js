@@ -17,50 +17,70 @@ if (typeof Float32Array == 'undefined') {
   };
 }
 
-Filters.getPixels = function(img) {
-  var c,ctx;
-  if (img.getContext) {
-    c = img;
-    try { ctx = c.getContext('2d'); } catch(e) {}
-  }
-  if (!ctx) {
-    c = this.getCanvas(img.width, img.height);
-    ctx = c.getContext('2d');
-    ctx.drawImage(img, 0, 0);
-  }
-  return ctx.getImageData(0,0,c.width,c.height);
-};
+if (typeof document != 'undefined') {
+  Filters.tmpCanvas = document.createElement('canvas');
+  Filters.tmpCtx = Filters.tmpCanvas.getContext('2d');
+  
+  Filters.getPixels = function(img) {
+    var c,ctx;
+    if (img.getContext) {
+      c = img;
+      try { ctx = c.getContext('2d'); } catch(e) {}
+    }
+    if (!ctx) {
+      c = this.getCanvas(img.width, img.height);
+      ctx = c.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+    }
+    return ctx.getImageData(0,0,c.width,c.height);
+  };
 
-Filters.tmpCanvas = document.createElement('canvas');
-Filters.tmpCtx = Filters.tmpCanvas.getContext('2d');
+  Filters.createImageData = function(w, h) {
+    return this.tmpCtx.createImageData(w, h);
+  };
+  
+  Filters.getCanvas = function(w,h) {
+    var c = document.createElement('canvas');
+    c.width = w;
+    c.height = h;
+    return c;
+  };
 
-Filters.createImageData = function(w, h) {
-  return this.tmpCtx.createImageData(w, h);
-};
+  Filters.filterImage = function(filter, image, var_args) {
+    var args = [this.getPixels(image)];
+    for (var i=2; i<arguments.length; i++) {
+      args.push(arguments[i]);
+    }
+    return filter.apply(this, args);
+  };
+
+  Filters.toCanvas = function(pixels) {
+    var canvas = this.getCanvas(pixels.width, pixels.height);
+    canvas.getContext('2d').putImageData(pixels, 0, 0);
+    return canvas;
+  };
+
+  Filters.toImageData = function(pixels) {
+    return this.identity(pixels);
+  };
+
+} else {
+
+  onmessage = function(e) {
+    var d = e.data;
+    var filter = Filters[d.name];
+    var res = filter.apply(Filters, d.args);
+    postMessage(res);
+  };
+
+  Filters.createImageData = function(w, h) {
+    return {width: w, height: h, data: this.getFloat32Array(w*h*4)};
+  };
+
+}
 
 Filters.createImageDataFloat32 = function(w, h) {
   return {width: w, height: h, data: this.getFloat32Array(w*h*4)};
-};
-
-Filters.getCanvas = function(w,h) {
-  var c = document.createElement('canvas');
-  c.width = w;
-  c.height = h;
-  return c;
-};
-
-Filters.filterImage = function(filter, image, var_args) {
-  var args = [this.getPixels(image)];
-  for (var i=2; i<arguments.length; i++) {
-    args.push(arguments[i]);
-  }
-  return filter.apply(this, args);
-};
-
-Filters.toCanvas = function(pixels) {
-  var canvas = this.getCanvas(pixels.width, pixels.height);
-  canvas.getContext('2d').putImageData(pixels, 0, 0);
-  return canvas;
 };
 
 Filters.identity = function(pixels, args) {
