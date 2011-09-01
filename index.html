@@ -1,19 +1,52 @@
 <html>
   <head>
+    <title>Canvas filters smoke tests</title>
     <script src="filters.js"></script>
+    <style>
+      body {
+        font-family: sans-serif;
+      }
+      canvas {
+        border: 1px solid #888888;
+        display: block;
+      }
+      pre {
+        margin: 0px;
+      }
+      #resultColumn {
+        float: left;
+      }
+      #imageColumn {
+        padding-bottom: 20px;
+        float:left;
+        padding-left: 20px;
+        margin-left: 10px;
+        border-left: 1px solid black;
+      }
+      h2 {
+        margin-top: 0px;
+      }
+      h3 {
+        margin-bottom: 0.5em;
+      }
+    </style>
   </head>
   <body>
-    <h1>Smoke Tests</h1>
-    <div>
-      <img id="testImage"
-           width="256" height="256">
+    <h1>Canvas filters smoke tests</h1>
+    <div id="resultColumn">
+    </div>
+    <div id="imageColumn">
+      <h2>Test results</h2>
+      <h3>Test image</h3>
+      <img id="testImage" width="256" height="256">
     </div>
     <script>
+      var resCol = document.getElementById('resultColumn');
+      var imgCol = document.getElementById('imageColumn');
+
       var testing = document.createElement('h2');
-      testing.innerHTML = 'testing';
-      document.body.appendChild(testing);
-      var progress = document.createElement('div');
-      document.body.appendChild(progress);
+      testing.innerHTML = 'Running tests...';
+      resCol.appendChild(testing);
 
       var tests = [];
       var test = function(name, var_args) {
@@ -25,9 +58,7 @@
 
       var runTests = function() {
         if (tests.length == 0) {
-          var ok = document.createElement('h2');
-          ok.innerHTML = 'ok';
-          document.body.appendChild(ok);
+          testing.innerHTML = 'Tests done';
         } else {
           var test = tests.shift();
           setTimeout(function() {
@@ -40,27 +71,32 @@
                 var res = Filters[test.name].apply(Filters, test.args);
                 var t1 = new Date().getTime();
                 if (res.width && res.height && res.data && res.width*res.height*4 == res.data.length) {
-                  console.log(test.name, res.data[0], res.data[1], res.data[2], res.data[3]);
                   canvas = Filters.toCanvas(res);
                 }
+                var space = '';
                 for (var i=test.name.length; i<20; i++)
-                  s += ' ';
+                  space += ' ';
+                s = space + s;
                 var ms = t1-t0;
                 var bar = '';
-                for (var i=0; i<40; i++) {
+                for (var i=0; i<30; i++) {
                   bar += (i*5 < ms ? '#' : ' ')
                 }
                 s += ' OK ['+bar+'] '+ms+' ms\n';
                 var p = document.createElement('pre');
                 p.innerHTML = s;
-                progress.appendChild(p);
-                if (canvas != null)
-                  progress.appendChild(canvas);
+                resCol.appendChild(p);
+                if (canvas != null) {
+                  var tname = document.createElement('h3');
+                  tname.textContent = test.name;
+                  imgCol.appendChild(tname);
+                  imgCol.appendChild(canvas);
+                }
               } catch(e) {
                 var p = document.createElement('pre');
                 s += ' ----- ERROR ' + e.toString + '\n';
                 p.innerHTML = s;
-                progress.appendChild(p);
+                resCol.appendChild(p);
                 console.log(e);
               }
               runTests();
@@ -89,6 +125,7 @@
         test('grayscaleAvg', c);
         test('threshold', c, 128);
         test('invert', c);
+        test('brightnessContrast', c, -0.25, 1.5);
         test('gaussian3', c);
         test('gaussian5', c);
         test('sobel', c);

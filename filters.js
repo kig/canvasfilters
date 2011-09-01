@@ -171,6 +171,23 @@ Filters.invert = function(pixels) {
   return output;
 };
 
+Filters.brightnessContrast = function(pixels, brightness, contrast) {
+  var output = Filters.createImageData(pixels.width, pixels.height);
+  var d = pixels.data;
+  var dst = output.data;
+  var contrastAdjust = -128*contrast + 128;
+  var brightnessAdjust = 255 * brightness;
+  var adjust = contrastAdjust + brightnessAdjust;
+  for (var i=0; i<d.length; i+=4) {
+    dst[i] = d[i]*contrast + adjust;
+    dst[i+1] = d[i+1]*contrast + adjust;
+    dst[i+2] = d[i+2]*contrast + adjust;
+    dst[i+3] = d[i+3];
+  }
+  return output;
+};
+
+
 Filters.convolve = function(pixels, weights, opaque) {
   var side = Math.round(Math.sqrt(weights.length));
   var halfSide = Math.floor(side/2);
