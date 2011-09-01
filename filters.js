@@ -143,24 +143,6 @@ Filters.grayscaleAvg = function(pixels, args) {
   return output;
 };
 
-Filters.desaturate = function(pixels, factor) {
-  var output = Filters.createImageData(pixels.width, pixels.height);
-  var dst = output.data;
-  var d = pixels.data;
-  var f1 = 1-factor;
-  for (var i=0; i<d.length; i+=4) {
-    var r = d[i];
-    var g = d[i+1];
-    var b = d[i+2];
-    var v = 0.3*r + 0.59*g + 0.11*b;
-    dst[i] = f1*dst[i] + factor*v;
-    dst[i+1] = f1*dst[i+1] + factor*v;
-    dst[i+2] = f1*dst[i+2] + factor*v;
-    dst[i+3] = d[i+3];
-  }
-  return output;
-};
-
 Filters.threshold = function(pixels, threshold) {
   var output = Filters.createImageData(pixels.width, pixels.height);
   var d = pixels.data;
