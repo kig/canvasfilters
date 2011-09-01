@@ -72,8 +72,15 @@
                 var pxPerSec = '';
                 var t1 = new Date().getTime();
                 if (res.width && res.height && res.data && res.width*res.height*4 == res.data.length) {
+                  var r1 = Filters[test.name].apply(Filters, test.args);
+                  var r2 = Filters[test.name].apply(Filters, test.args);
+                  var r3 = Filters[test.name].apply(Filters, test.args);
+                  var t2 = new Date().getTime();
+                  if (r1.width != r2.width || r3.width != res.width || r3.width != r1.width) {
+                    throw(test.name + ': inconsistent widths');
+                  }
                   canvas = Filters.toCanvas(res);
-                  pxPerSec = '\t' + (t1 != t0 ? Math.ceil(res.width * res.height / (t1-t0) / 100)/10 : 'n/a') + ' Mpx/s';
+                  pxPerSec = '\t' + (t2 != t0 ? Math.ceil(res.width * res.height / ((t2-t0)/4) / 100)/10 : 'n/a') + ' Mpx/s';
                 }
                 var space = '';
                 for (var i=test.name.length; i<20; i++)
