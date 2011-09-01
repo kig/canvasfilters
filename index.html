@@ -1,37 +1,85 @@
 <html>
-	<head>
-		<script src="filters.js"></script>
-	</head>
-	<body>
-		<script>
-			var testing = document.createElement('h2');
-			testing.innerHTML = 'testing';
-			document.body.appendChild(testing);
-			var a = Filters.getCanvas(200,200);
-			var b = Filters.createImageData(200,200);
-			var c = Filters.filterImage(Filters.grayscale, a);
-			Filters.toCanvas(c);
-			Filters.identity(c);
-			Filters.luminance(c);
-			Filters.grayscaleAvg(c);
-			Filters.desaturate(c, 0.4);
-			Filters.threshold(c, 128);
-			Filters.invert(c);
-			Filters.gaussian3(c);
-			Filters.gaussian5(c);
-			Filters.sobel(c);
-			Filters.sobelVectors(c);
-			Filters.laplace(c);
-			Filters.darkenBlend(c,b);
-			Filters.lightenBlend(c,b);
-			Filters.multiplyBlend(c,b);
-			Filters.screenBlend(c,b);
-			Filters.addBlend(c,b);
-			Filters.subBlend(c,b);
-			Filters.differenceBlend(c,b);
-			var ok = document.createElement('h2');
-			ok.innerHTML = 'ok';
-			document.body.appendChild(ok);
-		</script>
-	</body>
+  <head>
+    <script src="filters.js"></script>
+  </head>
+  <body>
+    <h1>Smoke Tests</h1>
+    <script>
+      var testing = document.createElement('h2');
+      testing.innerHTML = 'testing';
+      document.body.appendChild(testing);
+      var progress = document.createElement('pre');
+      document.body.appendChild(progress);
+
+      var tests = [];
+      var test = function(name, var_args) {
+        var args = [];
+        for (var i=1; i<arguments.length; i++)
+          args.push(arguments[i]);
+        tests.push({name:name, args:args});
+      };
+
+      var runTests = function() {
+        if (tests.length == 0) {
+          var ok = document.createElement('h2');
+          ok.innerHTML = 'ok';
+          document.body.appendChild(ok);
+        } else {
+          var test = tests.shift();
+          setTimeout(function() {
+            progress.innerHTML += test.name;
+            setTimeout(function() {
+              var t0 = new Date().getTime();
+              try {
+                Filters[test.name].apply(Filters, test.args);
+                var t1 = new Date().getTime();
+                for (var i=test.name.length; i<20; i++)
+                  progress.innerHTML += ' ';
+                var ms = t1-t0;
+                var bar = '';
+                for (var i=0; i<40; i++) {
+                  bar += (i*5 <= ms ? '#' : ' ')
+                }
+                progress.innerHTML += ' OK ['+bar+'] '+ms+' ms\n';
+              } catch(e) {
+                progress.innerHTML += ' ----- ERROR ' + e.toString + '\n';
+                console.log(e);
+              }
+              runTests();
+            }, 0);
+          }, 0);
+        }
+      };
+
+      var a = Filters.getCanvas(200,200);
+      var b = Filters.createImageData(200,200);
+      var c = Filters.filterImage(Filters.grayscale, a);
+      test('getCanvas', 200, 200);
+      test('createImageData', 200, 200);
+      test('filterImage', Filters.grayscale, a);
+      test('toCanvas', c);
+      test('identity', c);
+      test('luminance', c);
+      test('grayscale', c);
+      test('grayscaleAvg', c);
+      test('desaturate', c, 0.4);
+      test('threshold', c, 128);
+      test('invert', c);
+      test('gaussian3', c);
+      test('gaussian5', c);
+      test('sobel', c);
+      test('sobelVectors', c);
+      test('laplace', c);
+      test('distortSine', c, 0.4, -0.3);
+      test('darkenBlend', c,b);
+      test('lightenBlend', c,b);
+      test('multiplyBlend', c,b);
+      test('screenBlend', c,b);
+      test('addBlend', c,b);
+      test('subBlend', c,b);
+      test('differenceBlend', c,b);
+
+      runTests();
+    </script>
+  </body>
 </html>
