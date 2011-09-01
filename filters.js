@@ -1,4 +1,8 @@
+if (!window.Float32Array)
+  Float32Array = Array;
+
 Filters = {};
+
 Filters.getPixels = function(img) {
   var c,ctx;
   if (img.getContext) {
@@ -16,8 +20,12 @@ Filters.getPixels = function(img) {
 Filters.tmpCanvas = document.createElement('canvas');
 Filters.tmpCtx = Filters.tmpCanvas.getContext('2d');
 
-Filters.createImageData = function(w,h) {
-  return this.tmpCtx.createImageData(w,h);
+Filters.createImageData = function(w, h) {
+  return this.tmpCtx.createImageData(w, h);
+};
+
+Filters.createImageDataFloat32 = function(w, h) {
+  return {width: w, height: h, data: new Float32Array(w*h*4)};
 };
 
 Filters.getCanvas = function(w,h) {
@@ -32,7 +40,7 @@ Filters.filterImage = function(filter, image, var_args) {
   for (var i=2; i<arguments.length; i++) {
     args.push(arguments[i]);
   }
-  return filter.apply(null, args);
+  return filter.apply(this, args);
 };
 
 Filters.toCanvas = function(pixels) {
@@ -47,6 +55,44 @@ Filters.identity = function(pixels, args) {
   var d = pixels.data;
   for (var i=0; i<d.length; i++) {
     dst[i] = d[i];
+  }
+  return output;
+};
+
+Filters.horizontalFlip = function(pixels) {
+  var output = Filters.createImageData(pixels.width, pixels.height);
+  var w = pixels.width;
+  var h = pixels.height;
+  var dst = output.data;
+  var d = pixels.data;
+  for (var y=0; y<h; y++) {
+    for (var x=0; x<w; x++) {
+      var off = (y*w+x)*4;
+      var dstOff = (y*w+(w-x-1))*4;
+      dst[dstOff] = d[off];
+      dst[dstOff+1] = d[off+1];
+      dst[dstOff+2] = d[off+2];
+      dst[dstOff+3] = d[off+3];
+    }
+  }
+  return output;
+};
+
+Filters.verticalFlip = function(pixels) {
+  var output = Filters.createImageData(pixels.width, pixels.height);
+  var w = pixels.width;
+  var h = pixels.height;
+  var dst = output.data;
+  var d = pixels.data;
+  for (var y=0; y<h; y++) {
+    for (var x=0; x<w; x++) {
+      var off = (y*w+x)*4;
+      var dstOff = ((h-y-1)*w+x)*4;
+      dst[dstOff] = d[off];
+      dst[dstOff+1] = d[off+1];
+      dst[dstOff+2] = d[off+2];
+      dst[dstOff+3] = d[off+3];
+    }
   }
   return output;
 };
@@ -107,7 +153,7 @@ Filters.desaturate = function(pixels, factor) {
     var g = d[i+1];
     var b = d[i+2];
     var v = 0.3*r + 0.59*g + 0.11*b;
-    dst[i] = f1*dst[i] + factor*v; 
+    dst[i] = f1*dst[i] + factor*v;
     dst[i+1] = f1*dst[i+1] + factor*v;
     dst[i+2] = f1*dst[i+2] + factor*v;
     dst[i+3] = d[i+3];
@@ -185,8 +231,92 @@ Filters.convolve = function(pixels, weights, opaque) {
   return output;
 };
 
-if (!window.Float32Array)
-  Float32Array = Array;
+Filters.verticalConvolve = function(pixels, weightsVector, opaque) {
+  var side = weightsVector.length;
+  var halfSide = Math.floor(side/2);
+
+  var src = pixels.data;
+  var sw = pixels.width;
+  var sh = pixels.height;
+
+  var w = sw;
+  var h = sh;
+  var output = Filters.createImageData(w, h);
+  var dst = output.data;
+
+  var alphaFac = opaque ? 1 : 0;
+
+  for (var y=0; y<h; y++) {
+    for (var x=0; x<w; x++) {
+      var sy = y;
+      var sx = x;
+      var dstOff = (y*w+x)*4;
+      var r=0, g=0, b=0, a=0;
+      for (var cy=0; cy<side; cy++) {
+        var scy = Math.min(sh-1, Math.max(0, sy + cy - halfSide));
+        var scx = sx;
+        var srcOff = (scy*sw+scx)*4;
+        var wt = weightsVector[cy];
+        r += src[srcOff] * wt;
+        g += src[srcOff+1] * wt;
+        b += src[srcOff+2] * wt;
+        a += src[srcOff+3] * wt;
+      }
+      dst[dstOff] = r;
+      dst[dstOff+1] = g;
+      dst[dstOff+2] = b;
+      dst[dstOff+3] = a + alphaFac*(255-a);
+    }
+  }
+  return output;
+};
+
+Filters.horizontalConvolve = function(pixels, weightsVector, opaque) {
+  var side = weightsVector.length;
+  var halfSide = Math.floor(side/2);
+
+  var src = pixels.data;
+  var sw = pixels.width;
+  var sh = pixels.height;
+
+  var w = sw;
+  var h = sh;
+  var output = Filters.createImageData(w, h);
+  var dst = output.data;
+
+  var alphaFac = opaque ? 1 : 0;
+
+  for (var y=0; y<h; y++) {
+    for (var x=0; x<w; x++) {
+      var sy = y;
+      var sx = x;
+      var dstOff = (y*w+x)*4;
+      var r=0, g=0, b=0, a=0;
+      for (var cx=0; cx<side; cx++) {
+        var scy = sy;
+        var scx = Math.min(sw-1, Math.max(0, sx + cx - halfSide));
+        var srcOff = (scy*sw+scx)*4;
+        var wt = weightsVector[cx];
+        r += src[srcOff] * wt;
+        g += src[srcOff+1] * wt;
+        b += src[srcOff+2] * wt;
+        a += src[srcOff+3] * wt;
+      }
+      dst[dstOff] = r;
+      dst[dstOff+1] = g;
+      dst[dstOff+2] = b;
+      dst[dstOff+3] = a + alphaFac*(255-a);
+    }
+  }
+  return output;
+};
+
+Filters.separableConvolve = function(pixels, horizWeights, vertWeights, opaque) {
+  return this.horizontalConvolve(
+    this.verticalConvolveFloat32(pixels, vertWeights, opaque),
+    horizWeights, opaque
+  );
+};
 
 Filters.convolveFloat32 = function(pixels, weights, opaque) {
   var side = Math.round(Math.sqrt(weights.length));
@@ -198,9 +328,7 @@ Filters.convolveFloat32 = function(pixels, weights, opaque) {
 
   var w = sw;
   var h = sh;
-  var output = {
-    width: w, height: h, data: new Float32Array(w*h*4)
-  };
+  var output = Filters.createImageDataFloat32(w, h);
   var dst = output.data;
 
   var alphaFac = opaque ? 1 : 0;
@@ -232,6 +360,94 @@ Filters.convolveFloat32 = function(pixels, weights, opaque) {
   return output;
 };
 
+
+Filters.verticalConvolveFloat32 = function(pixels, weightsVector, opaque) {
+  var side = weightsVector.length;
+  var halfSide = Math.floor(side/2);
+
+  var src = pixels.data;
+  var sw = pixels.width;
+  var sh = pixels.height;
+
+  var w = sw;
+  var h = sh;
+  var output = Filters.createImageDataFloat32(w, h);
+  var dst = output.data;
+
+  var alphaFac = opaque ? 1 : 0;
+
+  for (var y=0; y<h; y++) {
+    for (var x=0; x<w; x++) {
+      var sy = y;
+      var sx = x;
+      var dstOff = (y*w+x)*4;
+      var r=0, g=0, b=0, a=0;
+      for (var cy=0; cy<side; cy++) {
+        var scy = Math.min(sh-1, Math.max(0, sy + cy - halfSide));
+        var scx = sx;
+        var srcOff = (scy*sw+scx)*4;
+        var wt = weightsVector[cy];
+        r += src[srcOff] * wt;
+        g += src[srcOff+1] * wt;
+        b += src[srcOff+2] * wt;
+        a += src[srcOff+3] * wt;
+      }
+      dst[dstOff] = r;
+      dst[dstOff+1] = g;
+      dst[dstOff+2] = b;
+      dst[dstOff+3] = a + alphaFac*(255-a);
+    }
+  }
+  return output;
+};
+
+Filters.horizontalConvolveFloat32 = function(pixels, weightsVector, opaque) {
+  var side = weightsVector.length;
+  var halfSide = Math.floor(side/2);
+
+  var src = pixels.data;
+  var sw = pixels.width;
+  var sh = pixels.height;
+
+  var w = sw;
+  var h = sh;
+  var output = Filters.createImageDataFloat32(w, h);
+  var dst = output.data;
+
+  var alphaFac = opaque ? 1 : 0;
+
+  for (var y=0; y<h; y++) {
+    for (var x=0; x<w; x++) {
+      var sy = y;
+      var sx = x;
+      var dstOff = (y*w+x)*4;
+      var r=0, g=0, b=0, a=0;
+      for (var cx=0; cx<side; cx++) {
+        var scy = sy;
+        var scx = Math.min(sw-1, Math.max(0, sx + cx - halfSide));
+        var srcOff = (scy*sw+scx)*4;
+        var wt = weightsVector[cx];
+        r += src[srcOff] * wt;
+        g += src[srcOff+1] * wt;
+        b += src[srcOff+2] * wt;
+        a += src[srcOff+3] * wt;
+      }
+      dst[dstOff] = r;
+      dst[dstOff+1] = g;
+      dst[dstOff+2] = b;
+      dst[dstOff+3] = a + alphaFac*(255-a);
+    }
+  }
+  return output;
+};
+
+Filters.separableConvolveFloat32 = function(pixels, horizWeights, vertWeights, opaque) {
+  return this.horizontalConvolveFloat32(
+    this.verticalConvolveFloat32(pixels, vertWeights, opaque),
+    horizWeights, opaque
+  );
+};
+
 Float32Array.prototype.normalizeInPlace = function() {
   var sum = 0;
   for (var i=0; i<this.length; i++) {
@@ -254,28 +470,12 @@ Float32Array.prototype.normalize = function() {
   return this.copy().normalizeInPlace();
 };
 
-Filters.gaussian5Kernel = new Float32Array([
-  1,  4,  7,  4, 1, 
-  4, 16, 26, 16, 4, 
-  7, 26, 41, 26, 7, 
-  4, 16, 26, 16, 4, 
-  1,  4,  7,  4, 1
-]);
-Filters.gaussian5Kernel.normalizeInPlace();
-
-Filters.gaussian3Kernel = new Float32Array([
-  16, 26, 16,
-  26, 41, 26, 
-  16, 26, 16 
-]);
-Filters.gaussian3Kernel.normalizeInPlace();
-
 Filters.gaussian5 = function(pixels) {
-  return Filters.convolve(pixels, Filters.gaussian5Kernel, false);
+  return Filters.separableConvolve(pixels, [1/256,4/256,6/256,4/256,1/256], [1,4,6,4,1], false);
 };
 
 Filters.gaussian3 = function(pixels) {
-  return Filters.convolve(pixels, Filters.gaussian3Kernel, false);
+  return Filters.separableConvolve(pixels, [4/196,6/196,4/196], [4,6,4], false);
 };
 
 Filters.laplace = function(pixels) {
@@ -287,25 +487,17 @@ Filters.laplace = function(pixels) {
 };
 
 Filters.sobelVerticalGradient = function(px) {
-  return this.convolveFloat32(
-    px,
-    [-1,-2,-1,
-      0, 0, 0,
-      1, 2, 1]);
+  return this.separableConvolveFloat32(px, [-1, 0, 1], [1, 2, 1]);
 };
 
 Filters.sobelHorizontalGradient = function(px) {
-  return this.convolveFloat32(
-    px,
-    [-1,0,1,
-     -2,0,2,
-     -1,0,1]);
+  return this.separableConvolveFloat32(px, [1,2,1], [-1,0,1]);
 };
 
 Filters.sobelVectors = function(px) {
   var vertical = this.sobelVerticalGradient(px);
   var horizontal = this.sobelHorizontalGradient(px);
-  var id = {width: vertical.width, height: vertical.height, 
+  var id = {width: vertical.width, height: vertical.height,
             data: new Float32Array(vertical.width*vertical.height*8)};
   var vd = vertical.data;
   var hd = horizontal.data;
