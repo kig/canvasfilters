@@ -69,9 +69,11 @@
               var canvas = null;
               try {
                 var res = Filters[test.name].apply(Filters, test.args);
+                var pxPerSec = '';
                 var t1 = new Date().getTime();
                 if (res.width && res.height && res.data && res.width*res.height*4 == res.data.length) {
                   canvas = Filters.toCanvas(res);
+                  pxPerSec = '\t' + (t1 != t0 ? Math.ceil(res.width * res.height / (t1-t0) / 100)/10 : 'n/a') + ' Mpx/s';
                 }
                 var space = '';
                 for (var i=test.name.length; i<20; i++)
@@ -82,7 +84,7 @@
                 for (var i=0; i<30; i++) {
                   bar += (i*5 < ms ? '#' : ' ')
                 }
-                s += ' OK ['+bar+'] '+ms+' ms\n';
+                s += ' OK ['+bar+'] '+ms+' ms'+pxPerSec+'\n';
                 var p = document.createElement('pre');
                 p.innerHTML = s;
                 resCol.appendChild(p);
