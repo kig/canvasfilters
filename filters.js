@@ -333,6 +333,60 @@ Filters.sobel = function(px) {
   return id;
 };
 
+Filters.bilinearSample = function (pixels, x, y) {
+  var x1 = Math.floor(x);
+  var x2 = Math.ceil(x);
+  var y1 = Math.floor(y);
+  var y2 = Math.ceil(y);
+  var a = (x1+pixels.width*y1)*4;
+  var b = (x2+pixels.width*y1)*4;
+  var c = (x1+pixels.width*y2)*4;
+  var d = (x2+pixels.width*y2)*4;
+  var df = ((x-x1) + (y-y1));
+  var cf = ((x2-x) + (y-y1));
+  var bf = ((x-x1) + (y2-y));
+  var af = ((x2-x) + (y2-y));
+  var rsum = 1/(af+bf+cf+df);
+  af *= rsum;
+  bf *= rsum;
+  cf *= rsum;
+  df *= rsum;
+  var rgba = new Array(4);
+  var data = pixels.data;
+  rgba[0] = data[a]*af + data[b]*bf + data[c]*cf + data[d]*df;
+  rgba[1] = data[a+1]*af + data[b+1]*bf + data[c+1]*cf + data[d+1]*df;
+  rgba[2] = data[a+2]*af + data[b+2]*bf + data[c+2]*cf + data[d+2]*df;
+  rgba[3] = data[a+3]*af + data[b+3]*bf + data[c+3]*cf + data[d+3]*df;
+  return rgba;
+};
+
+Filters.distortSine = function(pixels, amount, yamount) {
+  if (amount == null) amount = 0.5;
+  if (yamount == null) yamount = amount;
+  var output = Filters.createImageData(pixels.width, pixels.height);
+  var dst = output.data;
+  var d = pixels.data;
+  for (var y=0; y<output.height; y++) {
+    var sy = -Math.sin(y/(output.height-1) * Math.PI*2);
+    var srcY = y + sy * yamount * output.height/4;
+    srcY = Math.max(Math.min(srcY, output.height-1), 0);
+
+    for (var x=0; x<output.width; x++) {
+      var sx = -Math.sin(x/(output.width-1) * Math.PI*2);
+      var srcX = x + sx * amount * output.width/4;
+      srcX = Math.max(Math.min(srcX, output.width-1), 0);
+
+      var rgba = this.bilinearSample(pixels, srcX, srcY);
+
+      var off = (y*output.width+x)*4;
+      dst[off] = rgba[0];
+      dst[off+1] = rgba[1];
+      dst[off+2] = rgba[2];
+      dst[off+3] = rgba[3];
+    }
+  }
+  return output;
+};
 
 Filters.darkenBlend = function(below, above) {
   var output = Filters.createImageData(below.width, below.height);
