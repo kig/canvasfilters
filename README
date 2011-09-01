@@ -29,6 +29,10 @@ Filters : {
 	
 	// createImageData creates an ImageData object of the wanted dimensions
 	ImageData createImageData(int width, int height)
+
+        // bilinearSample bilinearly samples the image at the given coordinates.
+        // The result is computed by linear blending of the four pixels around x,y.
+        [r,g,b,a] bilinearSample(ImageData pixels, float x, float y)
 	
 	//
 	// Filters
@@ -98,15 +102,48 @@ Filters : {
 	
 	// sobelHorizontalGradient computes the signed horizontal gradient of the image
 	Float32ImageData sobelHorizontalGradient(ImageData pixels)
+
+        // distortSine distorts the image by pinching / punching it by the given amount.
+        // The distort amounts should be between -0.5 and 0.5.
+	ImageData distortSine(ImageData pixels, float xAmount, float yAmount)
 	
 	// darkenBlend blends b on top of a, replacing a with b whenever b is darker.
 	// The filter operates on a per-channel basis, the result pixels
-	// are computed as [min(a.r, b.r), min(a.g, b.g), min(a.b, b.b), a.a].
+	// are computed as [min(a.r, b.r), min(a.g, b.g), min(a.b, b.b), alpha(a.a, b.a)]
+        // where alpha(a, b) = a + (255-a)*b/255.
 	ImageData darkenBlend(ImageData a, ImageData b)
 	
 	// lightenBlend blends b on top of a, replacing a with b whenever b is lighter.
 	// The filter operates on a per-channel basis, the result pixels
-	// are computed as [max(a.r, b.r), max(a.g, b.g), max(a.b, b.b), a.a].
+	// are computed as [max(a.r, b.r), max(a.g, b.g), max(a.b, b.b), alpha(a.a, b.a)]
+        // where alpha(a, b) = a + (255-a)*b/255.
 	ImageData lightenBlend(ImageData a, ImageData b)
+
+        // addBlend blends b on top of a, adding b's values to a.
+        // [a.r+b.r, a.g+b.g, a.b+b.b, alpha(a.a, b.a)]
+        // where alpha(a, b) = a + (255-a)*b/255.
+	ImageData addBlend(ImageData a, ImageData b)
+
+        // subBlend blends b on top of a, subtracting b's values to a.
+        // [a.r-(255-b.r), a.g-(255-b.g), a.b-(255-b.b), alpha(a.a, b.a)]
+        // where alpha(a, b) = a + (255-a)*b/255.
+	ImageData subBlend(ImageData a, ImageData b)
+
+        // multiplyBlend blends b on top of a, multiplying b with a.
+        // [a.r*b.r/255, a.g*b.g/255, a.b*b.b/255, alpha(a.a, b.a)]
+        // where alpha(a, b) = a + (255-a)*b/255.
+	ImageData multiplyBlend(ImageData a, ImageData b)
+
+        // screenBlend blends b on top of a with the screen blend mode.
+        // Makes a brighter by an amount determined by b.
+        // [255 - (255 - b.c)*(255 - a.c)/255, ...,  alpha(a.a, b.a)]
+        // where alpha(a, b) = a + (255-a)*b/255.
+	ImageData screenBlend(ImageData a, ImageData b)
+
+        // differenceBlend blends b on top of a by taking the absolute difference
+        // between the images.
+        // [Math.abs(a.c-b.c), alpha(a.a, b.a)]
+        // where alpha(a, b) = a + (255-a)*b/255.
+	ImageData differenceBlend(ImageData a, ImageData b)
 	
 }
