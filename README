@@ -96,6 +96,12 @@ Filters : {
   // The contrast value ranges between 0 .. 127, with 1 being neutral.
   ImageData brightnessContrast(ImageData pixels, float brightness, float contrast)
 
+  // applyLUT applies a color lookup table to the image.
+  // The lookup table is an object of form
+  // {r:Uint8[256], g:Uint8[256], b:Uint8[256], a:Uint8[256]}
+  // Result pixel values are calculated by looking up the current value from
+  // the corresponding lookup table: [lut.r[r], lut.g[g], lut.b[b], lut.a[a]]
+  ImageData applyLUT(ImageData pixels, LookUpTable lut)
 
   //
   // Convolution filters

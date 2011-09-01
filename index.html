@@ -71,6 +71,8 @@
                 var res = Filters[test.name].apply(Filters, test.args);
                 var pxPerSec = '';
                 var t1 = new Date().getTime();
+                var ms = t1-t0;
+                var barMs = ms;
                 if (res.width && res.height && res.data && res.width*res.height*4 == res.data.length) {
                   var t2 = new Date().getTime();
                   var count = 1;
@@ -82,6 +84,8 @@
                     t2 = new Date().getTime();
                     count++;
                   }
+                  barMs = (t2-t0)/count;
+                  ms = Math.round(barMs);
                   canvas = Filters.toCanvas(res);
                   pxPerSec = '\t' + (t2 != t0 ? Math.ceil(res.width * res.height / ((t2-t0)/count) / 100)/10 : 'n/a') + ' Mpx/s';
                 }
@@ -89,10 +93,9 @@
                 for (var i=test.name.length; i<20; i++)
                   space += ' ';
                 s = space + s;
-                var ms = t1-t0;
                 var bar = '';
                 for (var i=0; i<30; i++) {
-                  bar += (i*5 < ms ? '#' : ' ')
+                  bar += (i*5 < barMs ? '#' : ' ')
                 }
                 s += ' OK ['+bar+'] '+ms+' ms'+pxPerSec+'\n';
                 var p = document.createElement('pre');
@@ -124,6 +127,24 @@
         var a = Filters.getCanvas(256,256);
         var b = Filters.verticalFlip(Filters.horizontalFlip(c));
         var d = Filters.filterImage(Filters.grayscale, img);
+        var identityLUT = {
+          r: Filters.identityLUT(),
+          g: Filters.identityLUT(),
+          b: Filters.identityLUT(),
+          a: Filters.identityLUT()
+        };
+        var invertLUT = {
+          r: Filters.invertLUT(),
+          g: Filters.invertLUT(),
+          b: Filters.invertLUT(),
+          a: Filters.identityLUT()
+        };
+        var lut = {
+          r: Filters.identityLUT(),
+          g: Filters.createLUTFromCurve([[0,0], [10,0], [128,58], [200,222], [225,255]]),
+          b: Filters.identityLUT(),
+          a: Filters.identityLUT()
+        };
         test('getCanvas', 200, 20);
         test('getPixels', img);
         test('createImageData', 200, 20);
@@ -138,6 +159,9 @@
         test('threshold', c, 128);
         test('invert', c);
         test('brightnessContrast', c, -0.25, 1.5);
+        test('applyLUT', c, identityLUT);
+        test('applyLUT', c, invertLUT);
+        test('applyLUT', c, lut);
         test('gaussianBlur', c, 0);
         test('gaussianBlur', c, 1);
         test('gaussianBlur', c, 1.5);

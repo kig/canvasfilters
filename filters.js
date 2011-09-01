@@ -146,26 +146,29 @@ Filters.grayscaleAvg = function(pixels, args) {
   var output = Filters.createImageData(pixels.width, pixels.height);
   var dst = output.data;
   var d = pixels.data;
+  var f = 1/3;
   for (var i=0; i<d.length; i+=4) {
     var r = d[i];
     var g = d[i+1];
     var b = d[i+2];
-    var v = (r+g+b) / 3;
+    var v = (r+g+b) * f;
     dst[i] = dst[i+1] = dst[i+2] = v;
     dst[i+3] = d[i+3];
   }
   return output;
 };
 
-Filters.threshold = function(pixels, threshold) {
+Filters.threshold = function(pixels, threshold, high, low) {
   var output = Filters.createImageData(pixels.width, pixels.height);
+  if (high == null) high = 255;
+  if (low == null) low = 0;
   var d = pixels.data;
   var dst = output.data;
   for (var i=0; i<d.length; i+=4) {
     var r = d[i];
     var g = d[i+1];
     var b = d[i+2];
-    var v = (0.3*r + 0.59*g + 0.11*b >= threshold) ? 255 : 0;
+    var v = (0.3*r + 0.59*g + 0.11*b >= threshold) ? high : low;
     dst[i] = dst[i+1] = dst[i+2] = v;
     dst[i+3] = d[i+3];
   }
@@ -186,21 +189,67 @@ Filters.invert = function(pixels) {
 };
 
 Filters.brightnessContrast = function(pixels, brightness, contrast) {
+  var lut = this.brightnessContrastLUT(brightness, contrast)
+  return this.applyLUT(pixels, {r:lut, g:lut, b:lut, a:this.identityLUT()});
+};
+
+Filters.applyLUT = function(pixels, lut) {
   var output = Filters.createImageData(pixels.width, pixels.height);
   var d = pixels.data;
   var dst = output.data;
-  var contrastAdjust = -128*contrast + 128;
-  var brightnessAdjust = 255 * brightness;
-  var adjust = contrastAdjust + brightnessAdjust;
+  var r = lut.r;
+  var g = lut.g;
+  var b = lut.b;
+  var a = lut.a;
   for (var i=0; i<d.length; i+=4) {
-    dst[i] = d[i]*contrast + adjust;
-    dst[i+1] = d[i+1]*contrast + adjust;
-    dst[i+2] = d[i+2]*contrast + adjust;
-    dst[i+3] = d[i+3];
+    dst[i] = r[d[i]];
+    dst[i+1] = g[d[i+1]];
+    dst[i+2] = b[d[i+2]];
+    dst[i+3] = a[d[i+3]];
   }
   return output;
 };
 
+Filters.createLUTFromCurve = function(points) {
+  var lut = this.getUint8Array(256);
+  var p = [0, 0];
+  for (var i=0,j=0; i<lut.length; i++) {
+    while (j < points.length && points[j][0] < i) {
+      p = points[j];
+      j++;
+    }
+    lut[i] = p[1];
+  }
+  return lut;
+};
+
+Filters.identityLUT = function() {
+  var lut = this.getUint8Array(256);
+  for (var i=0; i<lut.length; i++) {
+    lut[i] = i;
+  }
+  return lut;
+};
+
+Filters.invertLUT = function() {
+  var lut = this.getUint8Array(256);
+  for (var i=0; i<lut.length; i++) {
+    lut[i] = 255-i;
+  }
+  return lut;
+};
+
+Filters.brightnessContrastLUT = function(brightness, contrast) {
+  var lut = this.getUint8Array(256);
+  var contrastAdjust = -128*contrast + 128;
+  var brightnessAdjust = 255 * brightness;
+  var adjust = contrastAdjust + brightnessAdjust;
+  for (var i=0; i<lut.length; i++) {
+    var c = i*contrast + adjust;
+    lut[i] = c < 0 ? 0 : (c > 255 ? 255 : c);
+  }
+  return lut;
+};
 
 Filters.convolve = function(pixels, weights, opaque) {
   var side = Math.round(Math.sqrt(weights.length));
@@ -595,11 +644,12 @@ Filters.darkenBlend = function(below, above) {
   var a = below.data;
   var b = above.data;
   var dst = output.data;
+  var f = 1/255;
   for (var i=0; i<a.length; i+=4) {
-    dst[i] = Math.min(a[i],b[i]);
-    dst[i+1] = Math.min(a[i+1],b[i+1]);
-    dst[i+2] = Math.min(a[i+2],b[i+2]);
-    dst[i+3] = a[i+3]+((255-a[i+3])*b[i+3])/255;
+    dst[i] = a[i] < b[i] ? a[i] : b[i];
+    dst[i+1] = a[i+1] < b[i+1] ? a[i+1] : b[i+1];
+    dst[i+2] = a[i+2] < b[i+2] ? a[i+2] : b[i+2];
+    dst[i+3] = a[i+3]+((255-a[i+3])*b[i+3])*f;
   }
   return output;
 };
@@ -609,11 +659,12 @@ Filters.lightenBlend = function(below, above) {
   var a = below.data;
   var b = above.data;
   var dst = output.data;
+  var f = 1/255;
   for (var i=0; i<a.length; i+=4) {
-    dst[i] = Math.max(a[i],b[i]);
-    dst[i+1] = Math.max(a[i+1],b[i+1]);
-    dst[i+2] = Math.max(a[i+2],b[i+2]);
-    dst[i+3] = a[i+3]+((255-a[i+3])*b[i+3])/255;
+    dst[i] = a[i] > b[i] ? a[i] : b[i];
+    dst[i+1] = a[i+1] > b[i+1] ? a[i+1] : b[i+1];
+    dst[i+2] = a[i+2] > b[i+2] ? a[i+2] : b[i+2];
+    dst[i+3] = a[i+3]+((255-a[i+3])*b[i+3])*f;
   }
   return output;
 };
@@ -623,11 +674,12 @@ Filters.multiplyBlend = function(below, above) {
   var a = below.data;
   var b = above.data;
   var dst = output.data;
+  var f = 1/255;
   for (var i=0; i<a.length; i+=4) {
-    dst[i] = (a[i]*b[i])/255;
-    dst[i+1] = (a[i+1]*b[i+1])/255;
-    dst[i+2] = (a[i+2]*b[i+2])/255;
-    dst[i+3] = a[i+3]+((255-a[i+3])*b[i+3])/255;
+    dst[i] = (a[i]*b[i])*f;
+    dst[i+1] = (a[i+1]*b[i+1])*f;
+    dst[i+2] = (a[i+2]*b[i+2])*f;
+    dst[i+3] = a[i+3]+((255-a[i+3])*b[i+3])*f;
   }
   return output;
 };
@@ -637,11 +689,12 @@ Filters.screenBlend = function(below, above) {
   var a = below.data;
   var b = above.data;
   var dst = output.data;
+  var f = 1/255;
   for (var i=0; i<a.length; i+=4) {
-    dst[i] = 255 - (((255 - b[i])*(255 - a[i]))/255);
-    dst[i+1] = 255 - (((255 - b[i+1])*(255 - a[i+1]))/255);
-    dst[i+2] = 255 - (((255 - b[i+2])*(255 - a[i+2]))/255);
-    dst[i+3] = a[i+3]+((255-a[i+3])*b[i+3])/255;
+    dst[i] = a[i]+b[i]-a[i]*b[i]*f;
+    dst[i+1] = a[i+1]+b[i+1]-a[i+1]*b[i+1]*f;
+    dst[i+2] = a[i+2]+b[i+2]-a[i+2]*b[i+2]*f;
+    dst[i+3] = a[i+3]+((255-a[i+3])*b[i+3])*f;
   }
   return output;
 };
@@ -651,11 +704,12 @@ Filters.addBlend = function(below, above) {
   var a = below.data;
   var b = above.data;
   var dst = output.data;
+  var f = 1/255;
   for (var i=0; i<a.length; i+=4) {
     dst[i] = (a[i]+b[i]);
     dst[i+1] = (a[i+1]+b[i+1]);
     dst[i+2] = (a[i+2]+b[i+2]);
-    dst[i+3] = a[i+3]+((255-a[i+3])*b[i+3])/255;
+    dst[i+3] = a[i+3]+((255-a[i+3])*b[i+3])*f;
   }
   return output;
 };
@@ -665,11 +719,12 @@ Filters.subBlend = function(below, above) {
   var a = below.data;
   var b = above.data;
   var dst = output.data;
+  var f = 1/255;
   for (var i=0; i<a.length; i+=4) {
     dst[i] = (a[i]+b[i]-255);
     dst[i+1] = (a[i+1]+b[i+1]-255);
     dst[i+2] = (a[i+2]+b[i+2]-255);
-    dst[i+3] = a[i+3]+((255-a[i+3])*b[i+3])/255;
+    dst[i+3] = a[i+3]+((255-a[i+3])*b[i+3])*f;
   }
   return output;
 };
@@ -679,11 +734,12 @@ Filters.differenceBlend = function(below, above) {
   var a = below.data;
   var b = above.data;
   var dst = output.data;
+  var f = 1/255;
   for (var i=0; i<a.length; i+=4) {
     dst[i] = Math.abs(a[i]-b[i]);
     dst[i+1] = Math.abs(a[i+1]-b[i+1]);
     dst[i+2] = Math.abs(a[i+2]-b[i+2]);
-    dst[i+3] = a[i+3]+((255-a[i+3])*b[i+3])/255;
+    dst[i+3] = a[i+3]+((255-a[i+3])*b[i+3])*f;
   }
   return output;
 };
