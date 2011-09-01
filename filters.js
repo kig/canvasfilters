@@ -1,7 +1,21 @@
-if (!window.Float32Array)
-  Float32Array = Array;
-
 Filters = {};
+
+if (typeof Float32Array == 'undefined') {
+  Filters.getFloat32Array =
+  Filters.getUint8Array = function(len) {
+    if (len.length) {
+      return len.slice(0);
+    }
+    return new Array(len);
+  };
+} else {
+  Filters.getFloat32Array = function(len) {
+    return new Float32Array(len);
+  };
+  Filters.getUint8Array = function(len) {
+    return new Uint8Array(len);
+  };
+}
 
 Filters.getPixels = function(img) {
   var c,ctx;
@@ -25,7 +39,7 @@ Filters.createImageData = function(w, h) {
 };
 
 Filters.createImageDataFloat32 = function(w, h) {
-  return {width: w, height: h, data: new Float32Array(w*h*4)};
+  return {width: w, height: h, data: this.getFloat32Array(w*h*4)};
 };
 
 Filters.getCanvas = function(w,h) {
@@ -447,57 +461,54 @@ Filters.separableConvolveFloat32 = function(pixels, horizWeights, vertWeights, o
   );
 };
 
-Float32Array.prototype.normalizeInPlace = function() {
-  var sum = 0;
-  for (var i=0; i<this.length; i++) {
-    sum += this[i];
+Filters.gaussianBlur = function(pixels, diameter) {
+  diameter = Math.abs(diameter);
+  if (diameter <= 1) return Filters.identity(pixels);
+  var radius = diameter / 2;
+  var len = Math.ceil(diameter) + (1 - (Math.ceil(diameter) % 2))
+  var weights = this.getFloat32Array(len);
+  var rho = (radius+0.5) / 3;
+  var rhoSq = rho*rho;
+  var gaussianFactor = 1 / Math.sqrt(2*Math.PI*rhoSq);
+  var rhoFactor = -1 / (2*rho*rho)
+  var wsum = 0;
+  var middle = Math.floor(len/2);
+  for (var i=0; i<len; i++) {
+    var x = i-middle;
+    var gx = gaussianFactor * Math.exp(x*x*rhoFactor);
+    weights[i] = gx;
+    wsum += gx;
   }
-  var recip = 1/sum;
-  for (var j=0; j<this.length; j++) {
-    this[j] *= recip;
+  for (var i=0; i<weights.length; i++) {
+    weights[i] /= wsum;
   }
-  return this;
-};
-Float32Array.prototype.copy = function() {
-  var arr = new Float32Array(this.length);
-  for (var i=0; i<this.length; i++) {
-    arr[i] = this[i];
-  }
-  return arr;
-};
-Float32Array.prototype.normalize = function() {
-  return this.copy().normalizeInPlace();
+  return Filters.separableConvolve(pixels, weights, weights, false);
 };
 
-Filters.gaussian5 = function(pixels) {
-  return Filters.separableConvolve(pixels, [1/256,4/256,6/256,4/256,1/256], [1,4,6,4,1], false);
-};
-
-Filters.gaussian3 = function(pixels) {
-  return Filters.separableConvolve(pixels, [4/196,6/196,4/196], [4,6,4], false);
-};
-
+Filters.laplaceKernel = Filters.getFloat32Array(
+  [-1,-1,-1,
+   -1, 8,-1,
+   -1,-1,-1]);
 Filters.laplace = function(pixels) {
-  return Filters.convolve(pixels, [
-    -1, -1, -1,
-    -1,  8, -1,
-    -1, -1, -1
-  ], true);
+  return Filters.convolve(pixels, this.laplaceKernel, true);
 };
+
+Filters.sobelSignVector = Filters.getFloat32Array([-1,0,1]);
+Filters.sobelScaleVector = Filters.getFloat32Array([1,2,1]);
 
 Filters.sobelVerticalGradient = function(px) {
-  return this.separableConvolveFloat32(px, [-1, 0, 1], [1, 2, 1]);
+  return this.separableConvolveFloat32(px, this.sobelSignVector, this.sobelScaleVector);
 };
 
 Filters.sobelHorizontalGradient = function(px) {
-  return this.separableConvolveFloat32(px, [1,2,1], [-1,0,1]);
+  return this.separableConvolveFloat32(px, this.sobelScaleVector, this.sobelSignVector);
 };
 
 Filters.sobelVectors = function(px) {
   var vertical = this.sobelVerticalGradient(px);
   var horizontal = this.sobelHorizontalGradient(px);
   var id = {width: vertical.width, height: vertical.height,
-            data: new Float32Array(vertical.width*vertical.height*8)};
+            data: this.getFloat32Array(vertical.width*vertical.height*8)};
   var vd = vertical.data;
   var hd = horizontal.data;
   var idd = id.data;
@@ -509,10 +520,10 @@ Filters.sobelVectors = function(px) {
 };
 
 Filters.sobel = function(px) {
-  px = Filters.grayscale(px);
-  var vertical = Filters.sobelVerticalGradient(px);
-  var horizontal = Filters.sobelHorizontalGradient(px);
-  var id = Filters.createImageData(vertical.width, vertical.height);
+  px = this.grayscale(px);
+  var vertical = this.sobelVerticalGradient(px);
+  var horizontal = this.sobelHorizontalGradient(px);
+  var id = this.createImageData(vertical.width, vertical.height);
   for (var i=0; i<id.data.length; i+=4) {
     var v = Math.abs(vertical.data[i]);
     id.data[i] = v;
@@ -524,7 +535,7 @@ Filters.sobel = function(px) {
   return id;
 };
 
-Filters.bilinearSample = function (pixels, x, y) {
+Filters.bilinearSample = function (pixels, x, y, rgba) {
   var x1 = Math.floor(x);
   var x2 = Math.ceil(x);
   var y1 = Math.floor(y);
@@ -542,7 +553,6 @@ Filters.bilinearSample = function (pixels, x, y) {
   bf *= rsum;
   cf *= rsum;
   df *= rsum;
-  var rgba = new Array(4);
   var data = pixels.data;
   rgba[0] = data[a]*af + data[b]*bf + data[c]*cf + data[d]*df;
   rgba[1] = data[a+1]*af + data[b+1]*bf + data[c+1]*cf + data[d+1]*df;
@@ -554,9 +564,10 @@ Filters.bilinearSample = function (pixels, x, y) {
 Filters.distortSine = function(pixels, amount, yamount) {
   if (amount == null) amount = 0.5;
   if (yamount == null) yamount = amount;
-  var output = Filters.createImageData(pixels.width, pixels.height);
+  var output = this.createImageData(pixels.width, pixels.height);
   var dst = output.data;
   var d = pixels.data;
+  var px = this.createImageData(1,1).data;
   for (var y=0; y<output.height; y++) {
     var sy = -Math.sin(y/(output.height-1) * Math.PI*2);
     var srcY = y + sy * yamount * output.height/4;
@@ -567,7 +578,7 @@ Filters.distortSine = function(pixels, amount, yamount) {
       var srcX = x + sx * amount * output.width/4;
       srcX = Math.max(Math.min(srcX, output.width-1), 0);
 
-      var rgba = this.bilinearSample(pixels, srcX, srcY);
+      var rgba = this.bilinearSample(pixels, srcX, srcY, px);
 
       var off = (y*output.width+x)*4;
       dst[off] = rgba[0];

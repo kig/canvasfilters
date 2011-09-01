@@ -163,11 +163,8 @@ Filters : {
   // Pre-defined convolution filters
   //
 
-  // gaussian5 applies a 5x5 gaussian blur kernel on the image.
-  ImageData gaussian5(ImageData pixels)
-
-  // gaussian3 applies a 3x3 gaussian blur kernel on the image.
-  ImageData gaussian3(ImageData pixels)
+  // gaussianBlur applies a gaussian blur kernel of the wanted diameter on the image.
+  ImageData gaussianBlur(ImageData pixels, float diameter)
 
   // laplace applies a Laplace edge detection kernel on the image.
   ImageData laplace(ImageData pixels)
