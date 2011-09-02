@@ -67,10 +67,11 @@ if (typeof document != 'undefined') {
 } else {
 
   onmessage = function(e) {
-    var d = e.data;
-    var filter = Filters[d.name];
-    var res = filter.apply(Filters, d.args);
-    postMessage(res);
+    var ds = e.data;
+    if (!ds.length) {
+      ds = [ds];
+    }
+    postMessage(Filters.runPipeline(ds));
   };
 
   Filters.createImageData = function(w, h) {
@@ -78,6 +79,18 @@ if (typeof document != 'undefined') {
   };
 
 }
+
+Filters.runPipeline = function(ds) {
+  var res = null;
+  res = this[ds[0].name].apply(this, ds[0].args);
+  for (var i=1; i<ds.length; i++) {
+    var d = ds[i];
+    var args = d.args.slice(0);
+    args.unshift(res);
+    res = this[d.name].apply(this, args);
+  }
+  return res;
+};
 
 Filters.createImageDataFloat32 = function(w, h) {
   return {width: w, height: h, data: this.getFloat32Array(w*h*4)};
