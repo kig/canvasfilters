@@ -150,8 +150,8 @@
           var s = '';
           if (res.width && res.height && res.data && res.width*res.height*4 == res.data.length) {
             canvas = Filters.toCanvas(Filters.toImageData(res));
-            var px = res.width * res.height * pipeline.length;
-            pxPerSec = '\t' + (ms>0 ? Math.ceil(px / ms / 100)/10 : 'n/a') + ' Mpx/s';
+            var px = res.width * res.height;
+            pxPerSec = '\t' + (ms>0 ? Math.ceil(px / ms / 10)/100 : 'n/a') + ' Mpx/s';
           }
           s += ' OK '+ms+' ms'+pxPerSec+'\n';
           var p = document.createElement('pre');
