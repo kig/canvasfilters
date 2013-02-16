@@ -9,6 +9,10 @@ source ImageData.
 Based on http://www.html5rocks.com/en/tutorials/canvas/imagefilters/
 Smoke tests online at http://fhtr.org/canvasfilters/
 
+LICENSE
+-------
+MIT
+
 API Documentation
 -----------------
 

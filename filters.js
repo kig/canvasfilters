@@ -222,7 +222,7 @@ Filters.invert = function(pixels) {
 };
 
 Filters.brightnessContrast = function(pixels, brightness, contrast) {
-  var lut = this.brightnessContrastLUT(brightness, contrast)
+  var lut = this.brightnessContrastLUT(brightness, contrast);
   return this.applyLUT(pixels, {r:lut, g:lut, b:lut, a:this.identityLUT()});
 };
 
@@ -773,6 +773,40 @@ Filters.differenceBlend = function(below, above) {
     dst[i+1] = Math.abs(a[i+1]-b[i+1]);
     dst[i+2] = Math.abs(a[i+2]-b[i+2]);
     dst[i+3] = a[i+3]+((255-a[i+3])*b[i+3])*f;
+  }
+  return output;
+};
+
+Filters.erode = function(pixels) {
+  var src = pixels.data;
+  var sw = pixels.width;
+  var sh = pixels.height;
+
+  var w = sw;
+  var h = sh;
+  var output = Filters.createImageData(w, h);
+  var dst = output.data;
+
+  for (var y=0; y<h; y++) {
+    for (var x=0; x<w; x++) {
+      var sy = y;
+      var sx = x;
+      var dstOff = (y*w+x)*4;
+      var srcOff = (sy*sw+sx)*4;
+      var v = 0;
+      if (src[srcOff] == 0) {
+        if (src[(sy*sw+Math.max(0,sx-1))*4] == 0 && 
+            src[(Math.max(0,sy-1)*sw+sx)*4] == 0) {
+            v = 255;
+        }
+      } else {
+          v = 255;
+      }
+      dst[dstOff] = v;
+      dst[dstOff+1] = v;
+      dst[dstOff+2] = v;
+      dst[dstOff+3] = 255;
+    }
   }
   return output;
 };
