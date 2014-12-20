@@ -811,6 +811,6 @@ Filters.erode = function(pixels) {
   return output;
 };
 
-if (typeof window === 'undefined') {
+if (typeof require != 'undefined') {
   exports.Filters = Filters;
 }
