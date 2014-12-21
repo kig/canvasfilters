@@ -810,3 +810,7 @@ Filters.erode = function(pixels) {
   }
   return output;
 };
+
+if (typeof require != 'undefined') {
+  exports.Filters = Filters;
+}

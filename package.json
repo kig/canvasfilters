@@ -1,0 +1,10 @@
+{
+  "name": "canvasfilters",
+  "author": "Ilmari Heikkinen <ilmari@fhtr.net>",
+  "version": "0.0.1",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/kig/canvasfilters"
+  },
+  "main": "./filters.js"
+}
