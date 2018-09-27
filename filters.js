@@ -75,9 +75,11 @@ if (typeof document != 'undefined') {
   };
 
   Filters.createImageData = function(w, h) {
-    return {width: w, height: h, data: this.getFloat32Array(w*h*4)};
+    if (typeof ImageData === 'undefined') {
+      return Filters.createImageDataFloat32(w, h);
+    }
+    return new ImageData(w, h);
   };
-
 }
 
 Filters.runPipeline = function(ds) {
